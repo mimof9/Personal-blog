@@ -94,7 +94,7 @@ class ModelMetaclass(type):
         if name == 'Model':
             return type.__new__(cls, name, bases, attrs)
         #获取表名
-        tableName = attrs.get('__table__', None) or name #获取表名
+        tableName = attrs.get('__table__', None) or name #继承了Model的类 如果有__table__就作为表名 没有就用类名做表名
         logging.info('建立映射：%s(table: %s)' % (name, tableName))
         #获取所有列和主键
         mappings = dict()
@@ -145,7 +145,7 @@ class Model(dict, metaclass=ModelMetaclass):
     def getValue(self, key):
         return getattr(self, key, None)
 
-    def getValueOrDefault(self, key):   #当继承了Model的类没有在实例化时，没有指定相应字段，就用默认值
+    def getValueOrDefault(self, key):   #ModelMetaclass中获取了映射，所有属性，但是创建Model子类实例时，不一定传入了所有属性，当获取没有传入的属性时，调用此方法获取默认值
         value = getattr(self, key, None)
         if value is None:
             field = self.__mappings__[key]
@@ -160,7 +160,7 @@ class Model(dict, metaclass=ModelMetaclass):
         rs = await select('%s where `%s`=?' % (cls.__select__, cls.__primary_key__), [pk], 1)   #select * from tableName where primaryKey = ?
         if len(rs) == 0:
             return None
-        return cls(**rs[0]) #查询到的数据是dict的list 使用关键字参数传入第一个dict
+        return cls(**rs[0]) #查询到的数据是dict的list 使用关键字参数传入第一个dict 然后创建一个Model子类实例
 
     @classmethod
     async def findAll(cls, where=None, args=None, **kw):
