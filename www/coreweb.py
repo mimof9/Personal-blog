@@ -28,26 +28,31 @@ def post(path):
 #给服务器添加路由,也就是url映射到处理函数 注意到 封装的路由不用提供url 因为fn被装饰了 自带url。然后再写一个add_routes()添加所有被装饰的fn。路由设置就只需要一句代码了。
 def add_route(app, fn):
     method = getattr(fn, '__method__', None)
-    path = getattr(fn, '__path__', None)
+    path = getattr(fn, '__route__', None)
     if method is None or path is None:      #确保处理函数被@get或@post装饰，以便获取url
         raise ValueError('@get or @post not defined in %s' % str(fn))
     if not asyncio.iscoroutine(fn) and not inspect.isgeneratorfunction(fn): #把处理函数变为协程
         fn = asyncio.coroutine(fn)
-    logging('add route %s %s ==> %s(%s)' % (method, path, fn.__name__, inspect.signature(fn).parameters.keys()))
-    app.router.add_route(method, path, RequestHandler(fn))  #调用aiohttp的路由
+    logging.info('add route %s %s ==> %s(%s)' % (method, path, fn.__name__, ', '.join(inspect.signature(fn).parameters.keys())))
+    app.router.add_route(method, path, RequestHandler(app, fn))  #调用aiohttp的路由
+
 
 #把模块下的所有被@get或@post装饰过的函数 注册路由
 def add_routes(app, module_name):
     n = module_name.rfind('.') #最后一个.的索引
-    mod = __import__(module_name, globals(), locals(), formlist=module_name[n+1:])  #导入模块
-
+    #mod = __import__(module_name, globals(), locals(), [module_name[n+1:]])  #导入模块
+    if n == (-1):
+        mod = __import__(module_name, globals(), locals())
+    else:
+        name = module_name[n + 1:]
+        mod = getattr(__import__(module_name[:n], globals(), locals(), [name]), name)
     for attr in dir(mod):
         if attr.startswith('_'):
             continue
         fn = getattr(mod, attr) #根据key去找到对象
-        if callable(attr):
+        if callable(fn):
             method = getattr(fn, '__method__', None)
-            path = getattr(fn, '__path__', None)
+            path = getattr(fn, '__route__', None)
             if method and path:
                 add_route(app, fn)
 
@@ -106,7 +111,8 @@ def has_request_arg(fn):
 
 #RequestHandler最终还是调用fn函数去处理url，不过处理url之前，因为我们想自动从request中获取参数，所以就用RequestHandler来自动获取参数**kw。
 #下面写了一大堆，都是自动获取参数而已。 就像spring mvc做的那样
-def RequestHandler(object):
+class RequestHandler(object):
+
     def __init__(self, app, fn):
         self._app = app
         self._func = fn
