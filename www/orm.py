@@ -145,12 +145,12 @@ class Model(dict, metaclass=ModelMetaclass):
     def getValue(self, key):
         return getattr(self, key, None)
 
-    def getValueOrDefault(self, key):   #self[key] 找不到 就去 self.__mappings__[key] 找default
+    def getValueOrDefault(self, key):   #当继承了Model的类没有在实例化时，没有指定相应字段，就用默认值
         value = getattr(self, key, None)
         if value is None:
             field = self.__mappings__[key]
             if field.default is not None:
-                value = field.default() if callable(field.default) else field.default #如果是可调用就是调用返回值，如果不可调用就直接是default
+                value = field.default() if callable(field.default) else field.default #默认值可以是值，也可以是函数，比如日期，id等的计算函数
                 logging.debug('使用默认值 %s: %s' % (key, str(value)))
                 setattr(self, key, value)
         return value
