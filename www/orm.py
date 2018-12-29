@@ -9,7 +9,7 @@ async def create_pool(loop, **kw):
         host = kw.get('host', 'localhost'),
         port = kw.get('port', 3306),
         user = kw['user'],
-        passowrd = kw['password'],
+        password = kw['password'],
         db = kw['db'],
         charset = kw.get('charset', 'utf8'),
         autocommit = kw.get('autocommit', True),    #自动提交
@@ -26,7 +26,7 @@ async def select(sql, args, size=None):
         async with conn.cursor(aiomysql.DictCursor) as cur:
             await cur.execute(sql.replace('?', '%s'), args or ())
             if size:
-                rs = await cur.fetchmang(size)
+                rs = await cur.fetchmany(size)
             else:
                 rs = await cur.fetchall()
         logging.info('返回行数：%s' % len(rs))
@@ -115,7 +115,7 @@ class ModelMetaclass(type):
         # 删除静态属性
         for k in mappings.keys():
             attrs.pop(k)
-        attrs['__mapping__'] = mappings #保存属性和列的映射关系
+        attrs['__mappings__'] = mappings #保存属性和列的映射关系
         attrs['__table__'] = tableName
         attrs['__primary_key__'] = primaryKey #主键属性名
         attrs['__fields__'] = fields #除主键外的属性名
@@ -189,15 +189,15 @@ class Model(dict, metaclass=ModelMetaclass):
         return [cls(**r) for r in rs]
 
     @classmethod
-    async def findNumber(cls, selectField, where=None, args=None):
+    async def findNumber(cls, selectField, where=None, args=None): #这个就是查询某一个字段
         sql = ['select %s _num_ from `%s`' % (selectField, cls.__table__)]
         if where:
             sql.append('where')
             sql.append(where)
-        rs = await select(' '.join(sql), args, 1)
+        rs = await select(' '.join(sql), args,1)
         if len(rs) == 0:
             return None
-        return rs[0]['_num_']   #查询到的数据是dict的list
+        return rs  #查询到的数据是dict的list
 
     async def save(self):
         args = list(map(self.getValueOrDefault, self.__fields__))
