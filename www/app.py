@@ -72,7 +72,7 @@ async def data_factory(app, handler):
 async def response_factory(app, handler):
     async def response(request):
         logging.info('Response handler... ')
-        r = await handler(request)
+        r = await handler(request)  #拦截器的概念 request的时候到这里，当response后，接着执行下面的语句 和java中的一模一样
         if isinstance(r, web.StreamResponse):
             return r
         if isinstance(r, bytes):
