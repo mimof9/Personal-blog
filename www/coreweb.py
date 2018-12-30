@@ -173,8 +173,8 @@ class RequestHandler(object):
         try:
             r = await self._func(**kw)
             return r
-        except APIError as e:
-            return dict(error=e.error, data=e.data, message=e.message)
+        except APIError as e:       #抛出请求的rest api有错
+            return dict(error=e.error, data=e.data, message=e.message) #直接返回错误数据dict作为json
 
 #设置静态文件目录
 def add_static(app):
