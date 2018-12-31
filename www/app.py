@@ -7,6 +7,7 @@ from jinja2 import Environment, FileSystemLoader
 
 from coreweb import *
 import orm
+from handlers import cookie2user, COOKIE_NAME
 
 #def index(request):
 	#return web.Response(body=b'<h1>Awesome</h1>', content_type='text/html')
@@ -55,6 +56,21 @@ async def logger_factory(app, handler):
 		return (await handler(request))
 	return logger
 
+#拦截器-解析cookie 把里面的user绑定到request上 cookie验证的逻辑：
+#每个url请求都去验证cookie 如果cookie有效 再从cookie中解析user 因为每个url都要做 所以写成拦截器
+async def auth_factory(app, handler):
+    async def auth(request):
+        logging.info('check user: %s %s' % (request.method, request.path))
+        request.__user__ = None
+        cookie_str = request.cookies.get(COOKIE_NAME) #获取cookie
+        if cookie_str:
+            user = await cookie2user(cookie_str)
+            if user:
+                logging.info('set current user: %s' % user.email)
+                request.__user__ = user
+        return (await handler(request))
+    return auth
+
 #拦截器-解析数据到__data__
 async def data_factory(app, handler):
     async def parse_data(request):
@@ -73,7 +89,7 @@ async def response_factory(app, handler):
     async def response(request):
         logging.info('Response handler... ')
         r = await handler(request)  #拦截器的概念 request的时候到这里，当response后，接着执行下面的语句 和java中的一模一样
-        if isinstance(r, web.StreamResponse):
+        if isinstance(r, web.StreamResponse):   #web.Response()是web.StreamResponse类型对象 所以如果自己返回了web.Response()就不用处理了。
             return r
         if isinstance(r, bytes):
             resp = web.Response(body=r)
@@ -110,7 +126,7 @@ async def response_factory(app, handler):
 async def init(loop):
     await orm.create_pool(loop=loop, host='127.0.0.1', port=3306, user='root', password='admin', db='awesome')
     app = web.Application(middlewares=[
-        logger_factory, response_factory
+        logger_factory, auth_factory, response_factory
     ])
     init_jinja2(app, filters=dict(datetime=datetime_filter))
     add_routes(app, 'handlers')
