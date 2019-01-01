@@ -197,7 +197,7 @@ class Model(dict, metaclass=ModelMetaclass):
         rs = await select(' '.join(sql), args,1)
         if len(rs) == 0:
             return None
-        return rs  #查询到的数据是dict的list
+        return rs[0]['_num_']  #查询到的数据是dict的list 加上[0]和[__num__]用于查询总数
 
     async def save(self):
         args = list(map(self.getValueOrDefault, self.__fields__))
