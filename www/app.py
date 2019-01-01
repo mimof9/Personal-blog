@@ -8,6 +8,7 @@ from jinja2 import Environment, FileSystemLoader
 from coreweb import *
 import orm
 from handlers import cookie2user, COOKIE_NAME
+from config import configs
 
 #def index(request):
 	#return web.Response(body=b'<h1>Awesome</h1>', content_type='text/html')
@@ -125,7 +126,7 @@ async def response_factory(app, handler):
     return response
 
 async def init(loop):
-    await orm.create_pool(loop=loop, host='127.0.0.1', port=3306, user='root', password='admin', db='awesome')
+    await orm.create_pool(loop=loop, **configs.db)
     app = web.Application(middlewares=[
         logger_factory, auth_factory, response_factory
     ])
