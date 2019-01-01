@@ -69,6 +69,8 @@ async def auth_factory(app, handler):
             if user:
                 logging.info('set current user: %s' % user.email)
                 request.__user__ = user
+        if request.path.startswith('/manage/') and (request.__user__ is None or not request.__user__.admin):    #如果访问/manage/ 检查身份是否为管理员
+            return web.HTTPFound('/signin')
         return (await handler(request))
     return auth
 
